@@ -1,0 +1,27 @@
+### 1. Создаем категорию (сначала выполни это)
+POST http://localhost:7000/api/category/create
+Content-Type: application/json
+
+{
+    "name": "Ноутбуки"
+}
+
+### 2. Создаем бренд (затем это)
+POST http://localhost:7000/api/brand/create
+Content-Type: application/json
+
+{
+    "name": "Asus"
+}
+
+### 3. И только теперь создаем товар
+POST http://localhost:7000/api/product/create
+Content-Type: application/json
+
+{
+    "name": "Asus Zenbook",
+    "price": 120000,
+    "image": "zenbook.jpg",
+    "categoryId": 1,
+    "brandId": 1
+}
