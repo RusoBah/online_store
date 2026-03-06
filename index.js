@@ -1,10 +1,12 @@
 
 import express from "express";
-import sequelize from './server/db.js'; // конфиги 
+import fileUpload from 'express-fileupload';
+import sequelize from './server/db.js'; // конфиги
 import './server/models/mapping.js';
 import cors from 'cors';
 import router from './server/routes/index.js';
-
+import errorHandler from './server/middleware/ErrorHandler.js';
+import authMiddleware from './server/middleware/authMiddleware.js';
 
 
 const PORT = process.env.PORT || 5000;
@@ -16,8 +18,10 @@ const app = express();
 app.use(cors());
 // Позволяет серверу понимать JSON-формат в теле запроса
 app.use(express.json());
-
-
+// middleware для загрузки файлов
+app.use(fileUpload());
+app.use(express.static('static'));
+app.use(errorHandler);
 /* Подключение роутеров */
 app.use('/api', router);
 

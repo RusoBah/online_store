@@ -1,9 +1,17 @@
 import { Router } from 'express';
+import userController from '../controllers/userController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+
 const router = new Router();
 
-router.post('/signup', (req, res) => res.status(200).send('Регистрация пользователя'));
-router.post('/login', (req, res) => res.status(200).send('Вход в личный кабинет'));
-router.get('/check', (req, res) => res.status(200).send('Проверка авторизации'));
+// Основные маршруты авторизации
+router.post('/signup', userController.signup);
+router.post('/login', userController.login);
+
+// Защищенный маршрут (сначала отрабатывает middleware, потом контроллер)
+router.get('/check', authMiddleware, userController.check);
+
+// Заглушки для остальных CRUD операций (для примера, не реализованы)
 router.get('/getall', (req, res) => res.status(200).send('Список всех пользователей'));
 router.get('/getone/:id', (req, res) => res.status(200).send('Получение одного пользователя'));
 router.post('/create', (req, res) => res.status(200).send('Создание нового пользователя'));
