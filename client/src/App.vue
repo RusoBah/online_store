@@ -1,30 +1,556 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { computed, onMounted, reactive, ref } from 'vue';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  categoryId: number | null;
+  brandId: number | null;
+}
+
+interface DictionaryItem {
+  id: number;
+  name: string;
+}
+
+interface ProductListResponse {
+  rows: Product[];
+  count: number;
+}
+
+const products = ref<Product[]>([]);
+const categories = ref<DictionaryItem[]>([]);
+const brands = ref<DictionaryItem[]>([]);
+const isLoading = ref(true);
+const isSubmitting = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+const adminToken = ref(localStorage.getItem('adminToken') ?? '');
+const cartItems = reactive<Record<number, number>>({});
+
+const filters = reactive({
+  categoryId: '',
+  brandId: ''
+});
+
+const createForm = reactive({
+  name: '',
+  price: '',
+  categoryId: '',
+  brandId: ''
+});
+
+const createImage = ref<File | null>(null);
+
+const cartCounter = computed(() =>
+  Object.values(cartItems).reduce((sum, itemCount) => sum + itemCount, 0)
+);
+
+const shownProducts = computed(() => {
+  return products.value.filter((product) => {
+    const categoryMatch = filters.categoryId
+      ? String(product.categoryId) === filters.categoryId
+      : true;
+    const brandMatch = filters.brandId
+      ? String(product.brandId) === filters.brandId
+      : true;
+
+    return categoryMatch && brandMatch;
+  });
+});
+
+const withAuthHeaders = () => {
+  if (!adminToken.value.trim()) {
+    throw new Error('Введите JWT токен администратора для изменения товаров.');
+  }
+
+  return {
+    Authorization: `Bearer ${adminToken.value.trim()}`
+  };
+};
+
+const getJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(url, init);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message ?? 'Ошибка запроса');
+  }
+
+  return data as T;
+};
+
+const fetchProducts = async () => {
+  const data = await getJson<ProductListResponse>('/api/product/getall?limit=60&page=1');
+  products.value = data.rows;
+};
+
+const fetchCatalog = async () => {
+  const [categoriesResponse, brandsResponse] = await Promise.all([
+    getJson<DictionaryItem[]>('/api/category/getall'),
+    getJson<DictionaryItem[]>('/api/brand/getall')
+  ]);
+
+  categories.value = categoriesResponse;
+  brands.value = brandsResponse;
+};
+
+const loadPageData = async () => {
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    await Promise.all([fetchProducts(), fetchCatalog()]);
+  } catch (error) {
+    errorMessage.value = (error as Error).message;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const persistToken = () => {
+  localStorage.setItem('adminToken', adminToken.value);
+  successMessage.value = 'Токен сохранен в браузере.';
+};
+
+const resetStatus = () => {
+  errorMessage.value = '';
+  successMessage.value = '';
+};
+
+const onImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  createImage.value = target.files?.[0] ?? null;
+};
+
+const createProduct = async () => {
+  resetStatus();
+  isSubmitting.value = true;
+
+  try {
+    const headers = withAuthHeaders();
+    const formData = new FormData();
+    formData.append('name', createForm.name.trim());
+    formData.append('price', createForm.price.trim());
+    formData.append('categoryId', createForm.categoryId);
+    formData.append('brandId', createForm.brandId);
+
+    if (createImage.value) {
+      formData.append('image', createImage.value);
+    }
+
+    await getJson<Product>('/api/product/create', {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    createForm.name = '';
+    createForm.price = '';
+    createImage.value = null;
+    successMessage.value = 'Товар успешно добавлен.';
+    await fetchProducts();
+  } catch (error) {
+    errorMessage.value = (error as Error).message;
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const deleteProduct = async (id: number) => {
+  resetStatus();
+
+  try {
+    await getJson('/api/product/delete/' + id, {
+      method: 'DELETE',
+      headers: withAuthHeaders()
+    });
+
+    delete cartItems[id];
+    successMessage.value = 'Товар удален.';
+    await fetchProducts();
+  } catch (error) {
+    errorMessage.value = (error as Error).message;
+  }
+};
+
+const addToCart = (productId: number) => {
+  cartItems[productId] = (cartItems[productId] ?? 0) + 1;
+};
+
+const imageSource = (image: string) => {
+  if (!image) {
+    return 'https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&w=900&q=80';
+  }
+
+  if (image.startsWith('http')) {
+    return image;
+  }
+
+  return '/static/' + image;
+};
+
+onMounted(loadPageData);
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <p class="brand__mark">market</p>
+        <h1>Главная витрина</h1>
+      </div>
+      <div class="cart">
+        <span class="cart__icon" aria-hidden="true">🛒</span>
+        <span class="cart__label">Корзина</span>
+        <span class="cart__count">{{ cartCounter }}</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel panel--form">
+        <h2>Добавить товар</h2>
+        <p class="panel__caption">Создание и удаление выполняются через действующий backend.</p>
+
+        <label class="field">
+          <span>JWT токен администратора</span>
+          <input v-model="adminToken" placeholder="Bearer token" type="text" />
+        </label>
+        <button class="button button--ghost" type="button" @click="persistToken">Сохранить токен</button>
+
+        <form class="form" @submit.prevent="createProduct">
+          <label class="field">
+            <span>Название</span>
+            <input v-model="createForm.name" required type="text" />
+          </label>
+
+          <label class="field">
+            <span>Цена</span>
+            <input v-model="createForm.price" min="0" required type="number" />
+          </label>
+
+          <label class="field">
+            <span>Категория</span>
+            <select v-model="createForm.categoryId" required>
+              <option disabled value="">Выберите категорию</option>
+              <option v-for="category in categories" :key="category.id" :value="String(category.id)">
+                {{ category.name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Бренд</span>
+            <select v-model="createForm.brandId" required>
+              <option disabled value="">Выберите бренд</option>
+              <option v-for="brand in brands" :key="brand.id" :value="String(brand.id)">
+                {{ brand.name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Изображение (опционально)</span>
+            <input accept="image/*" type="file" @change="onImageChange" />
+          </label>
+
+          <button :disabled="isSubmitting" class="button" type="submit">
+            {{ isSubmitting ? 'Сохранение...' : 'Добавить товар' }}
+          </button>
+        </form>
+      </section>
+
+      <section class="panel panel--catalog">
+        <div class="catalog__head">
+          <div>
+            <h2>Товары</h2>
+            <p class="panel__caption">Вывод из `/api/product/getall`, удаление через `/api/product/delete/:id`.</p>
+          </div>
+
+          <div class="filters">
+            <select v-model="filters.categoryId" aria-label="Фильтр по категории">
+              <option value="">Все категории</option>
+              <option v-for="category in categories" :key="category.id" :value="String(category.id)">
+                {{ category.name }}
+              </option>
+            </select>
+
+            <select v-model="filters.brandId" aria-label="Фильтр по бренду">
+              <option value="">Все бренды</option>
+              <option v-for="brand in brands" :key="brand.id" :value="String(brand.id)">
+                {{ brand.name }}
+              </option>
+            </select>
+
+            <button class="button button--ghost" type="button" @click="loadPageData">Обновить</button>
+          </div>
+        </div>
+
+        <p v-if="errorMessage" class="status status--error">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="status status--success">{{ successMessage }}</p>
+        <p v-if="isLoading" class="status">Загрузка каталога...</p>
+
+        <div v-else class="catalog">
+          <article v-for="product in shownProducts" :key="product.id" class="product">
+            <img :alt="product.name" :src="imageSource(product.image)" class="product__image" loading="lazy" />
+            <div class="product__body">
+              <p class="product__title">{{ product.name }}</p>
+              <p class="product__price">{{ Number(product.price).toLocaleString('ru-RU') }} ₽</p>
+            </div>
+
+            <div class="product__actions">
+              <button class="button" type="button" @click="addToCart(product.id)">В корзину</button>
+              <button class="button button--danger" type="button" @click="deleteProduct(product.id)">Удалить</button>
+            </div>
+          </article>
+
+          <p v-if="shownProducts.length === 0" class="status">Товаров по текущему фильтру нет.</p>
+        </div>
+      </section>
+    </main>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.page {
+  min-height: 100vh;
+  color: #0f172a;
+  background: linear-gradient(160deg, #f6f8ff 0%, #eef2ff 35%, #f8fafc 100%);
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+}
+
+.brand__mark {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+  color: #4f46e5;
+}
+
+.cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+}
+
+.cart__icon {
+  font-size: 1.25rem;
+}
+
+.cart__count {
+  min-width: 1.8rem;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem 2rem;
+}
+
+.panel {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 50px -38px rgba(15, 23, 42, 0.5);
+}
+
+.panel--form {
+  padding: 1.25rem;
+  align-self: start;
+}
+
+.panel--catalog {
+  padding: 1.25rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel__caption {
+  margin: 0.45rem 0 1rem;
+  color: #475569;
+}
+
+.form {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.95rem;
+  background: #ffffff;
+}
+
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 0;
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  opacity: 0.65;
+  cursor: default;
+  transform: none;
+}
+
+.button--ghost {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.button--danger {
+  background: #dc2626;
+}
+
+.catalog__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filters select {
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  padding: 0.55rem 0.65rem;
+  background: #ffffff;
+}
+
+.status {
+  margin: 0.8rem 0;
+  color: #334155;
+}
+
+.status--error {
+  color: #b91c1c;
+}
+
+.status--success {
+  color: #0369a1;
+}
+
+.catalog {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 0.9rem;
+}
+
+.product {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  display: grid;
+  grid-template-rows: 150px auto auto;
+}
+
+.product__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product__body {
+  padding: 0.85rem 0.85rem 0.35rem;
+}
+
+.product__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.product__price {
+  margin: 0.3rem 0 0;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.product__actions {
+  padding: 0.35rem 0.85rem 0.85rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .topbar {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .cart__label {
+    display: none;
+  }
 }
 </style>
