@@ -1,14 +1,17 @@
-# 🛒 Simple Online Store (Backend)
+# 🛒 Simple Online Store (Fullstack)
 
-Backend для интернет-магазина на **Node.js + Express + PostgreSQL + Sequelize**.
+Fullstack интернет-магазин на **Node.js + Express + PostgreSQL + Sequelize + Vue 3 + Vite**.
 
-Поддерживает управление товарами, категориями, брендами и пользователями. Включает аутентификацию на JWT, загрузку файлов и централизованную обработку ошибок.
+Проект включает:
+- backend API для товаров, категорий, брендов и пользователей
+- frontend-панель для вывода товаров, авторизации администратора, добавления/удаления товаров
+- локальную корзину на клиенте со счётчиком и управлением количества через `+` / `-`
 
 ---
 
 ## 🚀 Быстрый старт
 
-### 1. Установка зависимостей
+### 1. Установка зависимостей backend
 ```bash
 npm install
 ```
@@ -30,7 +33,7 @@ DB_PORT=5432
 SECRET_KEY=ваш_секретный_ключ
 ```
 
-### 3. Запуск сервера
+### 3. Запуск backend
 ```bash
 # Режим разработки (с nodemon)
 npm run dev
@@ -41,15 +44,35 @@ node index.js
 
 Сервер запустится на **http://localhost:7000**
 
+### 4. Запуск frontend
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Frontend будет доступен на **http://localhost:5173**  
+В `vite.config.ts` настроен proxy на backend для `/api` и `/static`.
+
 ---
 
 ## 📁 Структура проекта
 
-```
+```text
 market/
-├── index.js                    # Точка входа
+├── index.js                    # Точка входа backend
 ├── package.json
 ├── test.http                   # Тестовые запросы
+├── client/                     # Vue 3 + Vite frontend
+│   ├── src/
+│   │   ├── App.vue
+│   │   ├── main.ts
+│   │   ├── style.css
+│   │   └── components/
+│   │       ├── catalog_list.vue
+│   │       └── authorization/
+│   │           └── auth_form.vue
+│   └── vite.config.ts
 ├── server/
 │   ├── .env                    # Переменные окружения
 │   ├── db.js                   # Подключение к PostgreSQL
@@ -86,14 +109,31 @@ market/
 
 ---
 
+## 🖥 Frontend (Vue)
+
+### Что реализовано
+- Вывод товаров из `GET /api/product/getall`
+- Фильтрация по категории и бренду
+- Добавление товара через `POST /api/product/create` (только ADMIN)
+- Удаление товара через `DELETE /api/product/delete/:id` (только ADMIN)
+- Авторизация администратора через `POST /api/user/login`
+- Автосохранение JWT после авторизации (без ручного ввода токена)
+- Шапка с иконкой корзины и общим счётчиком товаров
+- Кнопка `В корзину`, затем управление количеством через `+` и `-`
+- Счётчик количества в карточке read-only (меняется только кнопками)
+
+### Примечания по авторизации
+- Для `create/delete` нужен пользователь с ролью `ADMIN`
+- JWT берется автоматически после логина и отправляется в `Authorization: Bearer <token>`
+
+---
+
 ## 📡 API Reference
 
 ### Базовый URL
-```
+```text
 http://localhost:7000/api
 ```
-
----
 
 ### 📦 Товары (`/api/product`)
 
@@ -106,24 +146,9 @@ http://localhost:7000/api
 | DELETE | `/product/delete/:id` | Удаление товара |
 
 **Пример запроса — получение товаров:**
-```
+```text
 GET /api/product/getall?brandId=1&categoryId=1&limit=9&page=1
 ```
-
-**Пример создания товара:**
-```http
-POST http://localhost:7000/api/product/create
-Content-Type: application/json
-
-{
-    "name": "Asus Zenbook",
-    "price": 120000,
-    "categoryId": 1,
-    "brandId": 1
-}
-```
-
----
 
 ### 📂 Категории (`/api/category`)
 
@@ -135,18 +160,6 @@ Content-Type: application/json
 | PUT | `/category/update/:id` | Обновление категории |
 | DELETE | `/category/delete/:id` | Удаление категории |
 
-**Пример создания:**
-```http
-POST http://localhost:7000/api/category/create
-Content-Type: application/json
-
-{
-    "name": "Ноутбуки"
-}
-```
-
----
-
 ### 🏷 Бренды (`/api/brand`)
 
 | Метод | Endpoint | Описание |
@@ -157,18 +170,6 @@ Content-Type: application/json
 | PUT | `/brand/update/:id` | Обновление бренда |
 | DELETE | `/brand/delete/:id` | Удаление бренда |
 
-**Пример создания:**
-```http
-POST http://localhost:7000/api/brand/create
-Content-Type: application/json
-
-{
-    "name": "Asus"
-}
-```
-
----
-
 ### 👤 Пользователи (`/api/user`)
 
 | Метод | Endpoint | Описание |
@@ -176,31 +177,6 @@ Content-Type: application/json
 | POST | `/user/signup` | Регистрация (возвращает JWT-токен) |
 | POST | `/user/login` | Вход (возвращает JWT-токен) |
 | GET | `/user/check` | Проверка авторизации (требуется токен) |
-
-**Пример регистрации:**
-```http
-POST http://localhost:7000/api/user/signup
-Content-Type: application/json
-
-{
-    "email": "admin@mail.ru",
-    "password": "password123",
-    "role": "ADMIN"
-}
-```
-
-**Ответ:**
-```json
-{
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Пример проверки авторизации:**
-```http
-GET http://localhost:7000/api/user/check
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
 
 ---
 
@@ -214,46 +190,20 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | **express-fileupload** | Загрузка изображений товаров |
 | **CORS** | Разрешены кросс-доменные запросы |
 | **ErrorHandler** | Централизованная обработка ошибок |
-| **Logger** | Логирование запросов и ошибок |
+| **Vue 3 + Vite** | Клиентская часть и проксирование API |
 
 ---
 
 ## 🧪 Тестирование
 
-Файл **`test.http`** содержит готовые запросы для тестирования через HTTP Client в VS Code.
+Файл **`test.http`** содержит готовые запросы для тестирования backend через HTTP Client в VS Code.
 
-**Порядок тестирования:**
-1. Создайте категорию
-2. Создайте бренд
-3. Зарегистрируйте пользователя
-4. Войдите в систему (получите токен)
-5. Создайте товар
-
----
-
-## 📦 Зависимости
-
-```json
-{
-  "bcrypt": "^6.0.0",
-  "cors": "^2.8.6",
-  "dotenv": "^17.3.1",
-  "express": "^5.2.1",
-  "express-fileupload": "^1.5.2",
-  "jsonwebtoken": "^9.0.3",
-  "pg": "^8.18.0",
-  "pg-hstore": "^2.3.4",
-  "sequelize": "^6.37.7",
-  "uuid": "^13.0.0"
-}
-```
-
-**Dev-зависимости:**
-```json
-{
-  "nodemon": "^3.1.14"
-}
-```
+Базовый сценарий проверки:
+1. Создать категорию
+2. Создать бренд
+3. Зарегистрировать/войти пользователем `ADMIN`
+4. Авторизоваться на frontend
+5. Создать и удалить товар из UI
 
 ---
 
@@ -264,22 +214,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | Товары (CRUD) | ✅ 100% |
 | Категории (CRUD) | ✅ 100% |
 | Бренды (CRUD) | ✅ 100% |
-| Пользователи | ✅ 60% |
-| Аутентификация | ✅ 80% |
-| Авторизация (роли) | ⚠️ 50% |
+| Пользователи | ✅ 70% |
+| Аутентификация | ✅ 90% |
+| Авторизация (роли) | ✅ 80% |
+| Frontend (админ-каталог) | ✅ 85% |
 
-**Общий прогресс:** ~85%
-
-Подробности в файле [STATUS.md](STATUS.md)
+**Общий прогресс:** ~90%
 
 ---
 
 ## 📝 Следующие шаги
 
-- [ ] Подключить authMiddleware к защищённым роутам
-- [ ] Подключить adminMiddleware к админским операциям
-- [ ] Добавить валидацию входных данных
-- [ ] Реализовать полный CRUD пользователей
+- [ ] Добавить редактирование товара на frontend
+- [ ] Подключить серверную корзину вместо локальной
+- [ ] Добавить e2e тесты для сценария login/create/delete
+- [ ] Добавить страницу профиля администратора
 
 ---
 
