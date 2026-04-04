@@ -19,7 +19,6 @@ const Product = sequelize.define(
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
             allowNull: false,
         },
         price: {
@@ -35,7 +34,15 @@ const Product = sequelize.define(
             allowNull: false,
         },
     },
-    {}
+    {
+        indexes: [
+            {
+                unique: true,
+                fields: ['name', 'category_id'],
+                name: 'products_name_category_unique',
+            },
+        ],
+    }
 );
 
 export default Product;

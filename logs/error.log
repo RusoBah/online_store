@@ -1,0 +1,28 @@
+[ERROR] [2026-04-04T16:36:54.176Z] Ошибка авторизации
+  Type: JsonWebTokenError
+  Message: jwt malformed
+  Stack: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\jsonwebtoken\verify.js:70:17)
+    at auth (file:///C:/Users/rusob/OneDrive/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B/works/js/market/server/middleware/authMiddleware.js:18:29)
+    at Layer.handleRequest (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:295:15
+    at processParams (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:582:12)
+    at next (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:291:5)
+[ERROR] [2026-04-04T16:49:01.128Z] Ошибка авторизации
+  Type: JsonWebTokenError
+  Message: jwt malformed
+  Stack: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\jsonwebtoken\verify.js:70:17)
+    at auth (file:///C:/Users/rusob/OneDrive/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B/works/js/market/server/middleware/authMiddleware.js:18:29)
+    at Layer.handleRequest (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:295:15
+    at processParams (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:582:12)
+    at next (C:\Users\rusob\OneDrive\Документы\works\js\market\node_modules\router\index.js:291:5)

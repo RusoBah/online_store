@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import CatalogList from './components/catalog_list.vue';
+import AuthForm from './components/authorization/auth_form.vue';
 
 interface Product {
   id: number;
@@ -26,6 +27,7 @@ const categories = ref<DictionaryItem[]>([]);
 const brands = ref<DictionaryItem[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
+const isAuthSubmitting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const adminToken = ref(localStorage.getItem('adminToken') ?? '');
@@ -49,6 +51,8 @@ const cartCounter = computed(() =>
   Object.values(cartItems).reduce((sum, itemCount) => sum + itemCount, 0)
 );
 
+const isAuthorized = computed(() => normalizeToken(adminToken.value).length > 0);
+
 const shownProducts = computed(() => {
   return products.value.filter((product) => {
     const categoryMatch = filters.categoryId
@@ -62,22 +66,57 @@ const shownProducts = computed(() => {
   });
 });
 
+const normalizeToken = (value: string) => {
+  let raw = value.trim();
+  if (!raw) return '';
+
+  if (raw.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(raw) as { token?: string };
+      raw = (parsed.token ?? '').trim();
+    } catch {
+      raw = '';
+    }
+  }
+
+  if (raw.toLowerCase().startsWith('bearer ')) {
+    raw = raw.slice(7).trim();
+  }
+
+  return raw;
+};
+
 const withAuthHeaders = () => {
-  if (!adminToken.value.trim()) {
+  const inputToken = adminToken.value.trim();
+  const storedToken = (localStorage.getItem('adminToken') ?? '').trim();
+  const token = normalizeToken(inputToken || storedToken);
+
+  if (!token) {
     throw new Error('Введите JWT токен администратора для изменения товаров.');
   }
 
+  adminToken.value = token;
+
   return {
-    Authorization: `Bearer ${adminToken.value.trim()}`
+    Authorization: `Bearer ${token}`
   };
 };
 
 const getJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(url, init);
-  const data = await response.json();
+  const raw = await response.text();
+  let data: { message?: string } = {};
+
+  if (raw) {
+    try {
+      data = JSON.parse(raw) as { message?: string };
+    } catch {
+      data = {};
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.message ?? 'Ошибка запроса');
+    throw new Error(data.message ?? `Ошибка запроса (${response.status})`);
   }
 
   return data as T;
@@ -111,9 +150,39 @@ const loadPageData = async () => {
   }
 };
 
-const persistToken = () => {
-  localStorage.setItem('adminToken', adminToken.value);
-  successMessage.value = 'Токен сохранен в браузере.';
+const loginAsAdmin = async (credentials: { email: string; password: string }) => {
+  resetStatus();
+  isAuthSubmitting.value = true;
+
+  try {
+    const data = await getJson<{ token?: string }>('/api/user/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: credentials.email.trim(),
+        password: credentials.password
+      })
+    });
+
+    const token = normalizeToken(data.token ?? '');
+    if (!token) {
+      throw new Error('Сервер не вернул JWT токен.');
+    }
+
+    adminToken.value = token;
+    localStorage.setItem('adminToken', token);
+    successMessage.value = 'Авторизация выполнена. Токен сохранен.';
+  } catch (error) {
+    errorMessage.value = (error as Error).message;
+  } finally {
+    isAuthSubmitting.value = false;
+  }
+};
+
+const logout = () => {
+  adminToken.value = '';
+  localStorage.removeItem('adminToken');
+  successMessage.value = 'Сессия сброшена.';
 };
 
 const resetStatus = () => {
@@ -133,10 +202,10 @@ const createProduct = async () => {
   try {
     const headers = withAuthHeaders();
     const formData = new FormData();
-    formData.append('name', createForm.name.trim());
-    formData.append('price', createForm.price.trim());
-    formData.append('categoryId', createForm.categoryId);
-    formData.append('brandId', createForm.brandId);
+    formData.append('name', String(createForm.name ?? '').trim());
+    formData.append('price', String(createForm.price ?? '').trim());
+    formData.append('categoryId', String(createForm.categoryId ?? '').trim());
+    formData.append('brandId', String(createForm.brandId ?? '').trim());
 
     if (createImage.value) {
       formData.append('image', createImage.value);
@@ -213,11 +282,12 @@ onMounted(loadPageData);
         <h2>Добавить товар</h2>
         <p class="panel__caption">Создание и удаление выполняются через действующий backend.</p>
 
-        <label class="field">
-          <span>JWT токен администратора</span>
-          <input v-model="adminToken" placeholder="Bearer token" type="text" />
-        </label>
-        <button class="button button--ghost" type="button" @click="persistToken">Сохранить токен</button>
+        <AuthForm
+          :is-auth-submitting="isAuthSubmitting"
+          :is-authorized="isAuthorized"
+          @login="loginAsAdmin"
+          @logout="logout"
+        />
 
         <form class="form" @submit.prevent="createProduct">
           <label class="field">
