@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import CatalogList from './components/catalog_list.vue';
 
 interface Product {
   id: number;
@@ -180,18 +181,6 @@ const addToCart = (productId: number) => {
   cartItems[productId] = (cartItems[productId] ?? 0) + 1;
 };
 
-const imageSource = (image: string) => {
-  if (!image) {
-    return 'https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&w=900&q=80';
-  }
-
-  if (image.startsWith('http')) {
-    return image;
-  }
-
-  return '/static/' + image;
-};
-
 onMounted(loadPageData);
 </script>
 
@@ -199,7 +188,7 @@ onMounted(loadPageData);
   <div class="page">
     <header class="topbar">
       <div class="brand">
-        <p class="brand__mark">market</p>
+        <p class="brand__mark">ШОПЛОП</p>
         <h1>Главная витрина</h1>
       </div>
       <div class="cart">
@@ -262,53 +251,21 @@ onMounted(loadPageData);
         </form>
       </section>
 
-      <section class="panel panel--catalog">
-        <div class="catalog__head">
-          <div>
-            <h2>Товары</h2>
-            <p class="panel__caption">Вывод из `/api/product/getall`, удаление через `/api/product/delete/:id`.</p>
-          </div>
-
-          <div class="filters">
-            <select v-model="filters.categoryId" aria-label="Фильтр по категории">
-              <option value="">Все категории</option>
-              <option v-for="category in categories" :key="category.id" :value="String(category.id)">
-                {{ category.name }}
-              </option>
-            </select>
-
-            <select v-model="filters.brandId" aria-label="Фильтр по бренду">
-              <option value="">Все бренды</option>
-              <option v-for="brand in brands" :key="brand.id" :value="String(brand.id)">
-                {{ brand.name }}
-              </option>
-            </select>
-
-            <button class="button button--ghost" type="button" @click="loadPageData">Обновить</button>
-          </div>
-        </div>
-
-        <p v-if="errorMessage" class="status status--error">{{ errorMessage }}</p>
-        <p v-if="successMessage" class="status status--success">{{ successMessage }}</p>
-        <p v-if="isLoading" class="status">Загрузка каталога...</p>
-
-        <div v-else class="catalog">
-          <article v-for="product in shownProducts" :key="product.id" class="product">
-            <img :alt="product.name" :src="imageSource(product.image)" class="product__image" loading="lazy" />
-            <div class="product__body">
-              <p class="product__title">{{ product.name }}</p>
-              <p class="product__price">{{ Number(product.price).toLocaleString('ru-RU') }} ₽</p>
-            </div>
-
-            <div class="product__actions">
-              <button class="button" type="button" @click="addToCart(product.id)">В корзину</button>
-              <button class="button button--danger" type="button" @click="deleteProduct(product.id)">Удалить</button>
-            </div>
-          </article>
-
-          <p v-if="shownProducts.length === 0" class="status">Товаров по текущему фильтру нет.</p>
-        </div>
-      </section>
+      <CatalogList
+        :brands="brands"
+        :categories="categories"
+        :error-message="errorMessage"
+        :is-loading="isLoading"
+        :products="shownProducts"
+        :selected-brand-id="filters.brandId"
+        :selected-category-id="filters.categoryId"
+        :success-message="successMessage"
+        @add-to-cart="addToCart"
+        @delete-product="deleteProduct"
+        @refresh="loadPageData"
+        @update:selected-brand-id="filters.brandId = $event"
+        @update:selected-category-id="filters.categoryId = $event"
+      />
     </main>
   </div>
 </template>
