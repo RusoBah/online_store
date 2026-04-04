@@ -15,6 +15,7 @@ const props = defineProps<{
   categories: DictionaryItem[];
   brands: DictionaryItem[];
   products: Product[];
+  cartItems: Record<number, number>;
   selectedCategoryId: string;
   selectedBrandId: string;
   isLoading: boolean;
@@ -26,7 +27,8 @@ const emit = defineEmits<{
   (event: 'update:selectedCategoryId', value: string): void;
   (event: 'update:selectedBrandId', value: string): void;
   (event: 'refresh'): void;
-  (event: 'addToCart', productId: number): void;
+  (event: 'incrementCartItem', productId: number): void;
+  (event: 'decrementCartItem', productId: number): void;
   (event: 'deleteProduct', productId: number): void;
 }>();
 
@@ -93,7 +95,21 @@ const imageSource = (image: string) => {
         </div>
 
         <div class="product__actions">
-          <button class="button" type="button" @click="emit('addToCart', product.id)">В корзину</button>
+          <button
+            v-if="(props.cartItems[product.id] ?? 0) === 0"
+            class="button"
+            type="button"
+            @click="emit('incrementCartItem', product.id)"
+          >
+            В корзину
+          </button>
+          <div v-else class="counter">
+            <button class="button button--counter" type="button" @click="emit('decrementCartItem', product.id)">-</button>
+            <span class="counter__value" aria-label="Количество товара в корзине">
+              {{ props.cartItems[product.id] ?? 0 }}
+            </span>
+            <button class="button button--counter" type="button" @click="emit('incrementCartItem', product.id)">+</button>
+          </div>
           <button class="button button--danger" type="button" @click="emit('deleteProduct', product.id)">Удалить</button>
         </div>
       </article>
@@ -229,5 +245,31 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+}
+
+.counter {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.counter__value {
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 10px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  font-weight: 700;
+  color: #0f172a;
+  user-select: none;
+}
+
+.button--counter {
+  min-height: 36px;
+  padding: 0;
+  font-size: 1.05rem;
 }
 </style>

@@ -181,6 +181,16 @@ const addToCart = (productId: number) => {
   cartItems[productId] = (cartItems[productId] ?? 0) + 1;
 };
 
+const decrementCartItem = (productId: number) => {
+  const current = cartItems[productId] ?? 0;
+  if (current <= 1) {
+    delete cartItems[productId];
+    return;
+  }
+
+  cartItems[productId] = current - 1;
+};
+
 onMounted(loadPageData);
 </script>
 
@@ -253,6 +263,7 @@ onMounted(loadPageData);
 
       <CatalogList
         :brands="brands"
+        :cart-items="cartItems"
         :categories="categories"
         :error-message="errorMessage"
         :is-loading="isLoading"
@@ -260,7 +271,8 @@ onMounted(loadPageData);
         :selected-brand-id="filters.brandId"
         :selected-category-id="filters.categoryId"
         :success-message="successMessage"
-        @add-to-cart="addToCart"
+        @decrement-cart-item="decrementCartItem"
+        @increment-cart-item="addToCart"
         @delete-product="deleteProduct"
         @refresh="loadPageData"
         @update:selected-brand-id="filters.brandId = $event"
