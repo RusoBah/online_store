@@ -1,27 +1,22 @@
-### 1. Создаем категорию (сначала выполни это)
-POST http://localhost:7000/api/category/create
+### Регистрация нового пользователя
+POST http://localhost:7000/api/user/signup
 Content-Type: application/json
 
 {
-    "name": "Ноутбуки"
+    "email": "admin@mail.ru",
+    "password": "password123",
+    "role": "ADMIN"
 }
 
-### 2. Создаем бренд (затем это)
-POST http://localhost:7000/api/brand/create
+### Вход в систему (Login)
+POST http://localhost:7000/api/user/login
 Content-Type: application/json
 
 {
-    "name": "Asus"
+    "email": "admin@mail.ru",
+    "password": "password123"
 }
 
-### 3. И только теперь создаем товар
-POST http://localhost:7000/api/product/create
-Content-Type: application/json
-
-{
-    "name": "Asus Zenbook",
-    "price": 120000,
-    "image": "zenbook.jpg",
-    "categoryId": 1,
-    "brandId": 1
-}
+### Проверка авторизации (вставь токен из ответа выше после Bearer)
+GET http://localhost:7000/api/user/check
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBtYWlsLnJ1Iiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzcyODA2MDc5LCJleHAiOjE3NzI4OTI0Nzl9.HcBSz4y2MrQRyWORtahLs-gCUeHiwcsgRiAfJ6M5QCc

@@ -1,13 +1,15 @@
 
 import express from "express";
-import sequelize from './server/db.js'; // конфиги 
+import fileUpload from 'express-fileupload';
+import sequelize from './server/db.js';
 import './server/models/mapping.js';
 import cors from 'cors';
 import router from './server/routes/index.js';
+import errorHandler from './server/middleware/ErrorHandler.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './server/config/swagger.js';
 
-
-
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 7000;
 const app = express();
 
 /* Middlewares */
@@ -20,8 +22,14 @@ app.use(express.json());
 app.use(fileUpload());
 app.use(express.static('static'));
 
+/* Swagger Documentation */
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 /* Подключение роутеров */
 app.use('/api', router);
+
+/* Обработка ошибок */
+app.use(errorHandler);
 
 const start = async () => {
     try{
@@ -35,6 +43,7 @@ const start = async () => {
         console.log(' Все таблицы базы данных синхронизированы.');
 
         app.listen(PORT, ()=> console.log(`Сервер работает на порту ${PORT}`));
+        console.log(`Swagger документация доступна по адресу: http://localhost:${PORT}/api/docs`);
     } catch (e) {
         console.error("Не получилось подключиться", e);
     }

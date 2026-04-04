@@ -1,21 +1,15 @@
 import sequelize from '../db.js';
 import { DataTypes } from 'sequelize';
+import User from './User.js';
+import Product from './Product.js';
+import Category from './Category.js';
+import Brand from './Brand.js';
 
 /**
- * модель пользователь
- */
-const User = sequelize.define('user', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    email: {type: DataTypes.STRING, unique: true},
-    password: {type: DataTypes.STRING},
-    role: {type: DataTypes.STRING, defaultValue: 'USER'},
-});
-
-/**
- * Модель корзина 
+ * Модель корзина
  */
 const Basket = sequelize.define('basket', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 });
 
 /**
@@ -24,33 +18,6 @@ const Basket = sequelize.define('basket', {
 const BasketProduct = sequelize.define('basket_product', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     quantity: { type: DataTypes.INTEGER, defaultValue: 1 },
-});
-
-/**
- * Модель товар
- */
-const Product = sequelize.define('product', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    name: { type: DataTypes.STRING, unique: true, allowNull: false },
-    price: { type: DataTypes.INTEGER, allowNull: false },
-    rating: { type: DataTypes.INTEGER, defaultValue: 0 },
-    image: { type: DataTypes.STRING, allowNull: false },
-});
-
-/**
- * Категория
- */
-const Category = sequelize.define('category',{
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    name: { type: DataTypes.STRING, unique: true, allowNull: false },
-});
-
-/**
- * Бренд
- */
-const Brand = sequelize.define('brand', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    name: { type: DataTypes.STRING, unique: true, allowNull: false },
 });
 
 /* --- Связи (Associations) --- */

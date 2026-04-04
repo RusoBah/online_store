@@ -1,19 +1,16 @@
 import { Router } from "express";
 import productController from "../controllers/productController.js";
+import authMiddleware from "../middleware/authMiddleware.js";
+import adminMiddleware from "../middleware/adminMiddleware.js";
+import validate from "../middleware/validate.js";
+import { productValidation, paginationValidation } from "../middleware/validations.js";
 
 const router = Router();
 
-/* Теперь вместо того, чтобы писать логику (req, res) => { ... } прямо здесь,
-    мы просто передаем ссылку на нужный метод из контроллера.
-*/
-
-router.get('/getall', productController.getAll);
-
-router.get('/getone/:id', productController.getOne);
-router.post('/create', productController.create);
-
-// Для update и delete мы контроллер еще не писали, оставим пока заглушки
-router.put('/update/:id', (req, res) => res.status(200).send('Обновление товара'));
-router.delete('/delete/:id', (req, res) => res.status(200).send('Удаление товара'));
+router.get('/getall', paginationValidation, validate, productController.getAll);
+router.get('/getone/:id', productValidation.getOne, validate, productController.getOne);
+router.post('/create', authMiddleware, adminMiddleware, productValidation.create, validate, productController.create);
+router.put('/update/:id', authMiddleware, adminMiddleware, productValidation.update, validate, productController.update);
+router.delete('/delete/:id', authMiddleware, adminMiddleware, productValidation.delete, validate, productController.delete);
 
 export default router;
